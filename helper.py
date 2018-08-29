@@ -1,3 +1,4 @@
+import cv2
 import re
 import random
 import numpy as np
@@ -85,6 +86,7 @@ def gen_batch_function(data_folder, image_shape):
                 gt_image_file = label_paths[os.path.basename(image_file)]
 
                 image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
+                image=cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
                 gt_image = scipy.misc.imresize(scipy.misc.imread(gt_image_file), image_shape)
 
                 #gt_bg = np.all(gt_image == background_color, axis=2)
