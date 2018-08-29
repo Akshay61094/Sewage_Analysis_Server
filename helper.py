@@ -89,9 +89,9 @@ def gen_batch_function(data_folder, image_shape):
                 image=cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
                 gt_image = scipy.misc.imresize(scipy.misc.imread(gt_image_file), image_shape)
 
-                #gt_bg = np.all(gt_image == background_color, axis=2)
-                gt_image = gt_image.reshape(*gt_image.shape, 1)
-                gt_image = np.concatenate((np.invert(gt_image),gt_image ), axis=2)
+                gt_bg = gt_image == 255
+                gt_bg = gt_bg.reshape(*gt_bg.shape, 1)
+                gt_image = np.concatenate((np.invert(gt_bg),gt_bg ), axis=2)
 
                 images.append(image)
                 gt_images.append(gt_image)
@@ -113,7 +113,7 @@ def gen_test_output(sess, logits, keep_prob, image_pl, data_folder, image_shape)
     """
     for image_file in glob(os.path.join(data_folder, 'image_2', '*.png')):
         image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
-
+        image=cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
         im_softmax = sess.run(
             [tf.nn.softmax(logits)],
             {keep_prob: 1.0, image_pl: [image]})
@@ -137,6 +137,6 @@ def save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_p
     # Run NN on test images and save them to HD
     print('Training Finished. Saving test images to: {}'.format(output_dir))
     image_outputs = gen_test_output(
-        sess, logits, keep_prob, input_image, os.path.join(data_dir, 'data_road/testing'), image_shape)
+        sess, logits, keep_prob, input_image, os.path.join(data_dir, 'data_road_1/testing'), image_shape)
     for name, image in image_outputs:
         scipy.misc.imsave(os.path.join(output_dir, name), image)
