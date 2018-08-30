@@ -108,7 +108,7 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     """
     # TODO: Implement function
     # make logits a 2D tensor where each row represents a pixel and each column a class
-    logits = tf.reshape(nn_last_layer, (-1, num_classes))
+    logits = tf.reshape(nn_last_layer, (-1, num_classes), name='logits')
     correct_label = tf.reshape(correct_label, (-1, num_classes))
     # define loss function
     cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=correct_label))
@@ -147,8 +147,8 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
         batch_count=0
         for image, label in get_batches_fn(batch_size):
             _, loss = sess.run([train_op, cross_entropy_loss],
-                               feed_dict={input_image: image, correct_label: label, keep_prob: 0.7,
-                                          learning_rate: 0.0005})
+                               feed_dict={input_image: image, correct_label: label, keep_prob: 0.6,
+                                          learning_rate: 0.0001})
             batch_count+=1
             tot_loss+=loss
             print("epoch no",i,"batch_number",batch_count,"loss = {:.3f}".format(loss))
@@ -183,7 +183,7 @@ def run():
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
 
         # TODO: Build NN using load_vgg, layers, and optimize function
-        epochs = 25
+        epochs = 30
         batch_size = 2
 
         # TF placeholders
@@ -201,10 +201,122 @@ def run():
         train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_img,
                  correct_label, keep_prob, learning_rate)
 
-        # TODO: Save inference data using helper.save_inference_samples
-        helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_img)
+        # Saving
+        inputs = {
+            "input_img": input_img,
+             "logits": logits,
+             "keep_prob":keep_prob
+        }
+        outputs = {
+            "logits": logits
+        }
+#         outputs = {"prediction": model_output}
+        tf.saved_model.simple_save(
+            sess, 'model/', inputs,outputs
+        )
+       
 
         # OPTIONAL: Apply the trained model to a video
 
+def process_frame(image):
+  image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
+  image= cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+  im_softmax = sess.run(
+      [tf.nn.softmax(logits)],
+      {keep_prob: 1.0, image_pl: [image]})
+  im_softmax = im_softmax[0][:, 1].reshape(image_shape[0], image_shape[1])
+  segmentation = (im_softmax > 0.5).reshape(image_shape[0], image_shape[1], 1)
+  mask = np.dot(segmentation, np.array([[0, 255, 0, 127]]))
+  mask = scipy.misc.toimage(mask, mode="RGBA")
+  street_im = scipy.misc.toimage(image)
+  street_im.paste(mask, box=None, mask=mask)
+  
+  return street_im
+        
+        
+      
+def restore_and_predict():
+    from tensorflow.python.saved_model import tag_constants
+    data_dir = './data'
+    runs_dir = './runs'
+    image_shape = (160, 576)
+    
+#     vgg_tag = 'vgg16'
+#     vgg_input_tensor_name = 'image_input:0'
+#     vgg_keep_prob_tensor_name = 'keep_prob:0'
+#     vgg_layer3_out_tensor_name = 'layer3_out:0'
+#     vgg_layer4_out_tensor_name = 'layer4_out:0'
+#     vgg_layer7_out_tensor_name = 'layer7_out:0'
+
+#     tf.saved_model.loader.load(sess, [vgg_tag], vgg_path)
+#     graph=tf.get_default_graph()
+#     input_image=graph.get_tensor_by_name(vgg_input_tensor_name)
+#     keep_prob = graph.get_tensor_by_name(vgg_keep_prob_tensor_name)
+#     layer_3=  graph.get_tensor_by_name(vgg_layer3_out_tensor_name)
+#     layer_4 = graph.get_tensor_by_name(vgg_layer4_out_tensor_name)
+#     layer_7 = graph.get_tensor_by_name(vgg_layer7_out_tensor_name)
+    import scipy
+    import numpy as np
+    with tf.Session(graph=tf.Graph()) as sess:
+      tf.saved_model.loader.load(sess,[tf.saved_model.tag_constants.SERVING],'model')
+
+      input_img = sess.graph.get_tensor_by_name('image_input:0')
+      logits = sess.graph.get_tensor_by_name('logits:0')
+      keep_prob =sess.graph.get_tensor_by_name('keep_prob:0')
+      def process_image(image):
+        image = scipy.misc.imresize(image, image_shape)
+        im_softmax = sess.run(
+        [tf.nn.softmax(logits)],
+        {keep_prob: 1.0, input_img: [image]})
+        im_softmax = im_softmax[0][:, 1].reshape(image_shape[0], image_shape[1])
+        segmentation = (im_softmax > 0.5).reshape(image_shape[0], image_shape[1], 1)
+        mask = np.dot(segmentation, np.array([[0, 255, 0, 127]]))
+        mask = scipy.misc.toimage(mask, mode="RGBA")
+        street_im = scipy.misc.toimage(image)
+        street_im.paste(mask, box=None, mask=mask)
+        return np.array(street_im)
+      
+      from moviepy.editor import VideoFileClip
+
+      output_location = 'fault1_output_try.mp4'
+      video_input = VideoFileClip("sewer_crack_videoless_fps.mp4").subclip(0,15)
+
+      video_output = video_input.fl_image(process_image) #NOTE: this function expects color images!!
+
+        # #%time undist_clip.write_videofile(undist_output, audio=False)
+        # print("anupam")
+      video_output.write_videofile(output_location, audio=False)
+      video_input.reader.close()
+      video_input.audio.reader.close_proc()
+      video_output.reader.close()
+      video_output.audio.reader.close_proc()
+
+         # TODO: Save inference data using helper.save_inference_samples
+#       helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_img)
+      
+# def process_video():
+#   from moviepy.editor import VideoFileClip
+
+#   output_location = 'fault1_output_try.mp4'
+#   video_input = VideoFileClip("sewer_crack_videoless_fps.mp4").subclip(0,1)
+
+#   video_output = video_input.fl_image(restore_and_predict) #NOTE: this function expects color images!!
+
+#     # #%time undist_clip.write_videofile(undist_output, audio=False)
+#     # print("anupam")
+#   print("123")
+#   video_output.write_videofile(output_location, audio=False)
+#   print("qwe")
+#   video_input.reader.close()
+#   video_input.audio.reader.close_proc()
+#   video_output.reader.close()
+#   video_output.audio.reader.close_proc()
+
+      
+      
+    
 if __name__ == '__main__':
-    run()
+#     run()
+  
+    restore_and_predict()
+#   process_video()

@@ -113,7 +113,7 @@ def gen_test_output(sess, logits, keep_prob, image_pl, data_folder, image_shape)
     """
     for image_file in glob(os.path.join(data_folder, 'image_2', '*.png')):
         image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
-        image=cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
+        image= cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         im_softmax = sess.run(
             [tf.nn.softmax(logits)],
             {keep_prob: 1.0, image_pl: [image]})
