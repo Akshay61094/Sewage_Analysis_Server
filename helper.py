@@ -71,27 +71,40 @@ def gen_batch_function(data_folder, image_shape):
         Create batches of training data
         :param batch_size: Batch Size
         :return: Batches of training data
-        """
+      """
         image_paths = glob(os.path.join(data_folder, 'image_2', '*.png'))
-        label_paths = {
-            re.sub(r'_(lane|road)_', '_', os.path.basename(path)): path
-            for path in glob(os.path.join(data_folder, 'gt_image_2', '*_lane_*.png'))}
-        background_color = np.array([255, 0, 0])
-
+        image_paths += glob(os.path.join(data_folder, 'image_2', '*.PNG'))
+        lp =glob(os.path.join(data_folder, 'gt_image_2', '*.png'))
+        print(len(image_paths),len(lp))
+        image_paths.sort()
+        lp.sort()
+        label_paths = {os.path.basename(image_paths[i]):lp[i] for i in range(len(image_paths))}
         random.shuffle(image_paths)
         for batch_i in range(0, len(image_paths), batch_size):
             images = []
             gt_images = []
             for image_file in image_paths[batch_i:batch_i+batch_size]:
                 gt_image_file = label_paths[os.path.basename(image_file)]
-
                 image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
                 image=cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
-                gt_image = scipy.misc.imresize(scipy.misc.imread(gt_image_file), image_shape)
-
-                gt_bg = gt_image == 255
-                gt_bg = gt_bg.reshape(*gt_bg.shape, 1)
-                gt_image = np.concatenate((np.invert(gt_bg),gt_bg ), axis=2)
+                gt_image = scipy.misc.imread(gt_image_file)
+                if(len(gt_image.shape) > 2) :
+                  gt_image = (gt_image[:,:,0])
+                gt_image = scipy.misc.imresize(gt_image, image_shape)
+                if 'c' in os.path.basename(image_file):       
+                  gt_bg_c = gt_image == 255
+                  gt_bg_i = np.invert(gt_bg_c)
+                  temp = np.zeros(gt_image.shape)
+                  gt_bg_t = temp !=0
+                else:
+                  gt_bg_t = gt_image == 255
+                  gt_bg_i = np.invert(gt_bg_t)
+                  temp = np.zeros(gt_image.shape)
+                  gt_bg_c = temp !=0             
+                gt_bg_i = gt_bg_i.reshape(*gt_bg_i.shape, 1)
+                gt_bg_c = gt_bg_c.reshape(*gt_bg_c.shape, 1)
+                gt_bg_t = gt_bg_t.reshape(*gt_bg_t.shape, 1)
+                gt_image = np.concatenate((gt_bg_c,gt_bg_t,gt_bg_i), axis=2)
 
                 images.append(image)
                 gt_images.append(gt_image)
@@ -111,18 +124,46 @@ def gen_test_output(sess, logits, keep_prob, image_pl, data_folder, image_shape)
     :param image_shape: Tuple - Shape of image
     :return: Output for for each test image
     """
-    for image_file in glob(os.path.join(data_folder, 'image_2', '*.png')):
+    tst_images = glob(os.path.join(data_folder, 'image_2', '*.png'))
+    tst_images += glob(os.path.join(data_folder, 'image_2', '*.PNG'))
+    for image_file in tst_images:
         image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
-        image= cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image=cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
         im_softmax = sess.run(
             [tf.nn.softmax(logits)],
             {keep_prob: 1.0, image_pl: [image]})
-        im_softmax = im_softmax[0][:, 1].reshape(image_shape[0], image_shape[1])
-        segmentation = (im_softmax > 0.5).reshape(image_shape[0], image_shape[1], 1)
-        mask = np.dot(segmentation, np.array([[0, 255, 0, 127]]))
-        mask = scipy.misc.toimage(mask, mode="RGBA")
+        
+
+        im_softmax_c = im_softmax[0][:, 0].reshape(image_shape[0], image_shape[1])
+        im_softmax_t = im_softmax[0][:, 1].reshape(image_shape[0], image_shape[1])
+        segmentation_c = (im_softmax_c > 0.5).reshape(image_shape[0], image_shape[1], 1)
+        segmentation_t = (im_softmax_t > 0.5).reshape(image_shape[0], image_shape[1], 1)
+        mask_c = np.dot(segmentation_c, np.array([[0, 255, 0, 127]]))
+        mask_c = scipy.misc.toimage(mask_c, mode="RGBA")
+        mask_t = np.dot(segmentation_t, np.array([[255, 0, 0, 127]]))
+        mask_t = scipy.misc.toimage(mask_t, mode="RGBA")
         street_im = scipy.misc.toimage(image)
-        street_im.paste(mask, box=None, mask=mask)
+        street_im.paste(mask_c, box=None, mask=mask_c)
+        street_im.paste(mask_t, box=None, mask=mask_t)
+
+
+
+
+        
+#         if 'c' in os.path.basename(image_file):
+#           im_softmax = im_softmax[0][:, 0].reshape(image_shape[0], image_shape[1])
+#           segmentation = (im_softmax > 0.5).reshape(image_shape[0], image_shape[1], 1)
+#           mask = np.dot(segmentation, np.array([[0, 255, 0, 127]]))
+#           mask = scipy.misc.toimage(mask, mode="RGBA")
+#           street_im = scipy.misc.toimage(image)
+#           street_im.paste(mask, box=None, mask=mask)
+#         else:
+#           im_softmax = im_softmax[0][:, 1].reshape(image_shape[0], image_shape[1])
+#           segmentation = (im_softmax > 0.5).reshape(image_shape[0], image_shape[1], 1)
+#           mask = np.dot(segmentation, np.array([[255, 0, 0, 127]]))
+#           mask = scipy.misc.toimage(mask, mode="RGBA")
+#           street_im = scipy.misc.toimage(image)
+#           street_im.paste(mask, box=None, mask=mask)
 
         yield os.path.basename(image_file), np.array(street_im)
 

@@ -160,7 +160,7 @@ tests.test_train_nn(train_nn)
 
 
 def run():
-    num_classes = 3
+    num_classes = 2
     image_shape = (160, 576)
     data_dir = './data'
     runs_dir = './runs'
@@ -278,8 +278,8 @@ def restore_and_predict():
       
       from moviepy.editor import VideoFileClip
 
-      output_location = 'merged_video_out.mp4'
-      video_input = VideoFileClip("merged_video.mp4").subclip(0,15)
+      output_location = 'fault1_output_try.mp4'
+      video_input = VideoFileClip("sewer_crack_videoless_fps.mp4").subclip(0,15)
 
       video_output = video_input.fl_image(process_image) #NOTE: this function expects color images!!
 
@@ -316,6 +316,7 @@ def restore_and_predict():
       
     
 if __name__ == '__main__':
-    run()
+#     run()
+  
     restore_and_predict()
 #   process_video()
