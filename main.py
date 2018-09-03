@@ -147,8 +147,8 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
         batch_count=0
         for image, label in get_batches_fn(batch_size):
             _, loss = sess.run([train_op, cross_entropy_loss],
-                               feed_dict={input_image: image, correct_label: label, keep_prob: 0.6,
-                                          learning_rate: 0.0001})
+                               feed_dict={input_image: image, correct_label: label, keep_prob: 0.7,
+                                          learning_rate: 0.0005})
             batch_count+=1
             tot_loss+=loss
             print("epoch no",i,"batch_number",batch_count,"loss = {:.3f}".format(loss))
@@ -183,7 +183,7 @@ def run():
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
 
         # TODO: Build NN using load_vgg, layers, and optimize function
-        epochs = 30
+        epochs = 25
         batch_size = 2
 
         # TF placeholders
@@ -268,18 +268,23 @@ def restore_and_predict():
         im_softmax = sess.run(
         [tf.nn.softmax(logits)],
         {keep_prob: 1.0, input_img: [image]})
-        im_softmax = im_softmax[0][:, 1].reshape(image_shape[0], image_shape[1])
-        segmentation = (im_softmax > 0.5).reshape(image_shape[0], image_shape[1], 1)
-        mask = np.dot(segmentation, np.array([[0, 255, 0, 127]]))
-        mask = scipy.misc.toimage(mask, mode="RGBA")
+        im_softmax_c = im_softmax[0][:, 0].reshape(image_shape[0], image_shape[1])
+        im_softmax_t = im_softmax[0][:, 1].reshape(image_shape[0], image_shape[1])
+        segmentation_c = (im_softmax_c > 0.5).reshape(image_shape[0], image_shape[1], 1)
+        segmentation_t = (im_softmax_t > 0.5).reshape(image_shape[0], image_shape[1], 1)
+        mask_c = np.dot(segmentation_c, np.array([[0, 255, 0, 127]]))
+        mask_c = scipy.misc.toimage(mask_c, mode="RGBA")
+        mask_t = np.dot(segmentation_t, np.array([[255, 0, 0, 127]]))
+        mask_t = scipy.misc.toimage(mask_t, mode="RGBA")
         street_im = scipy.misc.toimage(image)
-        street_im.paste(mask, box=None, mask=mask)
+        street_im.paste(mask_c, box=None, mask=mask_c)
+        street_im.paste(mask_t, box=None, mask=mask_t)
         return np.array(street_im)
       
       from moviepy.editor import VideoFileClip
 
       output_location = 'merged_video_out.mp4'
-      video_input = VideoFileClip("merged_video.mp4").subclip(0,15)
+      video_input = VideoFileClip("merged_video.mp4")
 
       video_output = video_input.fl_image(process_image) #NOTE: this function expects color images!!
 
