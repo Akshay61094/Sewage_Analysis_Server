@@ -317,7 +317,37 @@ def restore_and_predict():
 #   video_output.reader.close()
 #   video_output.audio.reader.close_proc()
 
-      
+def liveProcess():
+    from tensorflow.python.saved_model import tag_constants
+    data_dir = './data'
+    runs_dir = './runs'
+    image_shape = (160, 576)
+    import scipy
+    import numpy as np
+    with tf.Session(graph=tf.Graph()) as sess:
+      tf.saved_model.loader.load(sess,[tf.saved_model.tag_constants.SERVING],'model')
+
+      input_img = sess.graph.get_tensor_by_name('image_input:0')
+      logits = sess.graph.get_tensor_by_name('logits:0')
+      keep_prob =sess.graph.get_tensor_by_name('keep_prob:0')
+      def pro_image(image):
+        image = scipy.misc.imresize(image, image_shape)
+        im_softmax = sess.run(
+        [tf.nn.softmax(logits)],
+        {keep_prob: 1.0, input_img: [image]})
+        im_softmax_c = im_softmax[0][:, 0].reshape(image_shape[0], image_shape[1])
+        im_softmax_t = im_softmax[0][:, 1].reshape(image_shape[0], image_shape[1])
+        segmentation_c = (im_softmax_c > 0.5).reshape(image_shape[0], image_shape[1], 1)
+        segmentation_t = (im_softmax_t > 0.5).reshape(image_shape[0], image_shape[1], 1)
+        mask_c = np.dot(segmentation_c, np.array([[0, 255, 0, 127]]))
+        mask_c = scipy.misc.toimage(mask_c, mode="RGBA")
+        mask_t = np.dot(segmentation_t, np.array([[255, 0, 0, 127]]))
+        mask_t = scipy.misc.toimage(mask_t, mode="RGBA")
+        street_im = scipy.misc.toimage(image)
+        street_im.paste(mask_c, box=None, mask=mask_c)
+        street_im.paste(mask_t, box=None, mask=mask_t)
+        return np.array(street_im)
+    return pro_image
       
     
 if __name__ == '__main__':
