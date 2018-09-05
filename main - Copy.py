@@ -320,3 +320,55 @@ if __name__ == '__main__':
   
     restore_and_predict()
 #   process_video()
+
+
+#
+
+
+fault_found_duration = 0
+fault_not_found_duration = 0
+frame_count=0
+
+crack_set=[]
+crack_start=[]
+crack_end=[]
+
+root_set=[]
+root_start=[]
+root_end=[]
+
+if detected:
+
+	 if (crack_detected)
+		 crack_found_duration += 1 
+		 if crack_found_duration ==10:
+		 start.append(frame_count)
+		 if crack_found_duration >= 10:
+			  crack_frames.append(frames)
+		  crack_not_found_duration=0
+		  
+	if (tree_root)
+		 #crack replace with tree
+		 crack_found_duration += 1 
+		 if crack_found_duration ==10:
+		 start.append(frame_count)
+		 if crack_found_duration >= 10:
+			  crack_frames.append(frames)
+		  crack_not_found_duration=0
+		  
+else :
+     fault_not_found_duration +=1
+     if(fault_not_found_duration == 10):
+	 end.append[frame_count]
+
+     if(fault_not_found_duration >10):
+	 if not null crack_set.append[crack_frames]
+	 if not null root_set.append(root_frames)
+	 
+	 crack_frames=[]
+	 root_frames=[]
+	 crack_found_duration = 0
+	 root_found_duration = 0
+         
+	
+frame_count+=1 
