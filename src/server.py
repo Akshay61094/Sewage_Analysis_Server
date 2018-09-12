@@ -1,5 +1,6 @@
 from flask import Flask, render_template, Response
 import cv2
+import os.path
 from flask_cors import CORS
 from flask import request
 from flask import jsonify
@@ -47,7 +48,7 @@ def processVideo(inputUrl):
         from moviepy.editor import VideoFileClip
 
         output_location = '../videos/output/'+inputUrl+'_output.mp4'
-        video_input = VideoFileClip('../videos/input/'+inputUrl+'.mp4').subclip(0,5)
+        video_input = VideoFileClip('../videos/input/'+inputUrl)
 
         video_output = video_input.fl_image(process_image)  # NOTE: this function expects color images!!
 
@@ -136,7 +137,7 @@ def hello():
 def input_video_feed():
     global region_selected
     global pipe_selected
-    return Response(open('../videos/input/' + region_selected + pipe_selected + '.mp4', "rb"), mimetype="video/mp4")
+    return Response(open('../videos/input/' + region_selected + pipe_selected , "rb"), mimetype="video/mp4")
 
 @app.route('/output_video_feed')
 def output_video_feed():
@@ -150,12 +151,15 @@ def postJsonHandler():
     # print (request.is_json)
     global region_selected
     global  pipe_selected
+
     content = request.get_json()
     # print (content)
     region_selected = content['region']
     pipe_selected = content['pipe']
+    print(region_selected,pipe_selected)
     inputUrl = region_selected+pipe_selected
-    processVideo(inputUrl)
+    if not os.path.exists('../videos/output/' + region_selected + pipe_selected + '_output.mp4'):
+        processVideo(inputUrl)
     return jsonify('Ok')
 
 if __name__ == '__main__':
