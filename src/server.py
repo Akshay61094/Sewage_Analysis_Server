@@ -28,6 +28,9 @@ def processVideo(inputUrl):
         keep_prob = sess.graph.get_tensor_by_name('keep_prob:0')
 
         def process_image(image):
+            # print("input shape",image.shape)
+            input_shape=image.shape
+            # print("shape of input",input_shape)
             image = scipy.misc.imresize(image, image_shape)
             im_softmax = sess.run(
                 [tf.nn.softmax(logits)],
@@ -43,7 +46,10 @@ def processVideo(inputUrl):
             street_im = scipy.misc.toimage(image)
             street_im.paste(mask_c, box=None, mask=mask_c)
             street_im.paste(mask_t, box=None, mask=mask_t)
-            return np.array(street_im)
+            str_im=np.array(street_im)
+            str_im=scipy.misc.imresize(str_im, input_shape)
+            # print("shape of output", str_im.shape)
+            return str_im
 
         from moviepy.editor import VideoFileClip
 
