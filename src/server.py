@@ -170,7 +170,7 @@ def postJsonHandler():
 
 if __name__ == '__main__':
     print("**********************hello")
-    app.run(host='0.0.0.0', debug=True, use_reloader=False)
+    app.run(host='0.0.0.0', debug=True, use_reloader=False,threaded=True)
 
     # cap = cv2.VideoCapture('http://192.168.31.180:8080/video')
     # while (True):
