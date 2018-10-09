@@ -6,8 +6,10 @@ from flask import request
 from flask import jsonify
 import tensorflow as tf
 import matplotlib.pyplot as plt
+import LiveProcessing
+#from src import LiveProcessing
 
-URL='http://192.168.31.180:8080/video'
+URL='http://10.156.172.197:8080/video'
 
 app = Flask(__name__)
 CORS(app)
@@ -58,30 +60,27 @@ def processVideo(inputUrl):
 
         video_output = video_input.fl_image(process_image)  # NOTE: this function expects color images!!
 
-        # #%time undist_clip.write_videofile(undist_output, audio=False)
-        # print("anupam")
         video_output.write_videofile(output_location, audio=False)
 
-def gen(flag):
-    global region_selected
-    global pipe_selected
-    if(flag==False):
-        vidcap = cv2.VideoCapture('../videos/input/'+region_selected + pipe_selected+'.mp4')
+# def gen(flag):
+#     global region_selected
+#     global pipe_selected
+#     if(flag==False):
+#         vidcap = cv2.VideoCapture('../videos/input/'+region_selected + pipe_selected+'.mp4')
 
-        while (True):
-            success, frame = vidcap.read()
-            plt.imshow(frame)
-            if frame is not None:
-                yield (b'--frame\r\n'
-                    b'Content-Type: image/jpeg\r\n\r\n' +cv2.imencode('.jpg', frame)[1].tostring() + b'\r\n')
-    else:
-        vidcap = cv2.VideoCapture('../videos/output/' + region_selected + pipe_selected + '_output.mp4')
+#         while (True):
+#             success, frame = vidcap.read()
+#             plt.imshow(frame)
+#             if frame is not None:
+#                 yield (b'--frame\r\n'
+#                     b'Content-Type: image/jpeg\r\n\r\n' +cv2.imencode('.jpg', frame)[1].tostring() + b'\r\n')
+#     else:
+#         vidcap = cv2.VideoCapture('../videos/output/' + region_selected + pipe_selected + '_output.mp4')
 
-        while (True):
-            success, frame = vidcap.read()
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + cv2.imencode('.jpg', frame)[1].tostring() + b'\r\n')
-
+#         while (True):
+#             success, frame = vidcap.read()
+#             yield (b'--frame\r\n'
+#                    b'Content-Type: image/jpeg\r\n\r\n' + cv2.imencode('.jpg', frame)[1].tostring() + b'\r\n')
 
 
 @app.route('/video_feed')
@@ -129,6 +128,16 @@ def postJsonHandler():
     if not os.path.exists('../videos/output/' + region_selected + pipe_selected + '_output.mp4'):
         processVideo(inputUrl)
     return jsonify('Ok')
+
+
+@app.route('/live_output_video_feed')
+def live_output_video_feed():
+    return Response(LiveProcessing.live_feed(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/live_input_video_feed')
+def live_input_video_feed():
+    print("in 1")
+    return Response(LiveProcessing.gen(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 if __name__ == '__main__':
     print("**********************hello")

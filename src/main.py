@@ -162,8 +162,8 @@ tests.test_train_nn(train_nn)
 def run():
     num_classes = 3
     image_shape = (160, 576)
-    data_dir = './data'
-    runs_dir = './runs'
+    data_dir = '../data'
+    runs_dir = '../runs'
     #tests.test_for_kitti_dataset(data_dir)
 
     # Download pretrained vgg model
@@ -183,7 +183,7 @@ def run():
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
 
         # TODO: Build NN using load_vgg, layers, and optimize function
-        epochs = 25
+        epochs = 35
         batch_size = 2
 
         # TF placeholders
@@ -212,7 +212,7 @@ def run():
         }
 #         outputs = {"prediction": model_output}
         tf.saved_model.simple_save(
-            sess, 'model/', inputs,outputs
+            sess, '../model/', inputs,outputs
         )
        
 
@@ -258,7 +258,7 @@ def restore_and_predict():
     import scipy
     import numpy as np
     with tf.Session(graph=tf.Graph()) as sess:
-      tf.saved_model.loader.load(sess,[tf.saved_model.tag_constants.SERVING],'model')
+      tf.saved_model.loader.load(sess,[tf.saved_model.tag_constants.SERVING],'../model')
 
       input_img = sess.graph.get_tensor_by_name('image_input:0')
       logits = sess.graph.get_tensor_by_name('logits:0')
@@ -325,7 +325,7 @@ def liveProcess():
     import scipy
     import numpy as np
     with tf.Session(graph=tf.Graph()) as sess:
-      tf.saved_model.loader.load(sess,[tf.saved_model.tag_constants.SERVING],'model')
+      tf.saved_model.loader.load(sess,[tf.saved_model.tag_constants.SERVING],'../model')
 
       input_img = sess.graph.get_tensor_by_name('image_input:0')
       logits = sess.graph.get_tensor_by_name('logits:0')
@@ -351,6 +351,6 @@ def liveProcess():
       
     
 if __name__ == '__main__':
-    #run()
-    restore_and_predict()
-#   process_video()
+    run()
+   #restore_and_predict()
+   #process_video()
